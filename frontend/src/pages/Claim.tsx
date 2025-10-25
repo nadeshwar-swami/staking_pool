@@ -5,11 +5,14 @@ import algosdk from 'algosdk';
 import { AppState, StakeError } from '../types';
 
 const appState: AppState = {
-  app_id: 748346211,
-  asset_id: 748346215
+  app_id: 748513476,
+  asset_id: 748513487
 };
 
-const peraWallet = new PeraWalletConnect();
+const peraWallet = new PeraWalletConnect({
+  shouldShowSignTxnToast: false,
+  chainId: 416002 // TestNet chain ID
+});
 
 const MainContent = styled.main`
   display: flex;
@@ -131,6 +134,11 @@ const Claim: React.FC = () => {
       const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
       const accountInfo = await algodClient.accountInformation(address).do();
       
+      // Check if opted into reward ASA
+      const hasOptedInToReward = accountInfo.assets?.some(
+        (asset: any) => asset['asset-id'] === appState.asset_id
+      ) ?? false;
+
       const localState = accountInfo.appsLocalState?.find(
         (app: any) => Number(app.id) === appState.app_id
       );
@@ -138,22 +146,41 @@ const Claim: React.FC = () => {
       if (localState?.keyValue) {
         const keyValueMap: { [key: string]: any } = {};
         for (const kv of localState.keyValue) {
-          const key = Buffer.from(kv.key, 'base64').toString();
+          // Convert base64 key to UTF-8 string
+          const keyBytes = new Uint8Array(Buffer.from(kv.key, 'base64'));
+          const key = new TextDecoder().decode(keyBytes);
           keyValueMap[key] = kv.value.uint;
         }
 
-        // S: staked amount, ST: stake start time, SP: stake period
-        if (keyValueMap["S"] && keyValueMap["ST"] && keyValueMap["SP"]) {
+        // Get global state for reward calculation
+        const appInfo = await algodClient.getApplicationByID(appState.app_id).do();
+        const globalState: { [key: string]: any } = {};
+        for (const kv of appInfo.params['global-state'] || []) {
+          const keyBytes = new Uint8Array(Buffer.from(kv.key, 'base64'));
+          const key = new TextDecoder().decode(keyBytes);
+          globalState[key] = kv.value.uint;
+        }
+
+        // S: staked amount, RD: reward debt, RPS: global reward per share
+        if (keyValueMap["S"]) {
           const stakeAmount = keyValueMap["S"] / 1e6; // Convert from microALGO to ALGO
-          const startTime = keyValueMap["ST"]; // Unix timestamp
-          const period = keyValueMap["SP"]; // Period in seconds
-          const endTime = startTime + period;
+          const rewardDebt = keyValueMap["RD"] || 0;
+          const globalRewardPerShare = globalState["RPS"] || 0;
+          
+          // Calculate pending rewards
+          const pendingReward = Math.max(0, 
+            (stakeAmount * 1e6 * (globalRewardPerShare - rewardDebt)) / 1e9
+          );
           const now = Math.floor(Date.now() / 1000);
+          const startTime = keyValueMap["ST"] || now;
+          const period = keyValueMap["SP"] || (90 * 24 * 60 * 60); // Default to 90 days if not set
+          const endTime = startTime + period;
           const isClaimable = now >= endTime;
 
           // Calculate expected rewards based on APR
-          const apr = period === 30 * 24 * 60 * 60 ? 0.05 : // 5% for 30 days
-                     period === 60 * 24 * 60 * 60 ? 0.07 : // 7% for 60 days
+          const stakePeriodDays = period / (24 * 60 * 60);
+          const apr = stakePeriodDays <= 30 ? 0.05 : // 5% for 30 days
+                     stakePeriodDays <= 60 ? 0.07 : // 7% for 60 days
                      0.10; // 10% for 90 days
           const reward = (stakeAmount * apr * (period / (365 * 24 * 60 * 60))).toFixed(2);
 
@@ -177,7 +204,7 @@ const Claim: React.FC = () => {
     }
   };
 
-  const handleClaim = async (position: StakePosition) => {
+  const handleClaim = async (_position: StakePosition) => {
     if (!accountAddress) {
       setError({ type: 'user_rejected', message: 'Please connect your wallet first' });
       return;

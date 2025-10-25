@@ -3,10 +3,13 @@
 Usage: set environment variables as in .env.example then run.
 """
 import os
+import time
 from algosdk import account, mnemonic
 from algosdk.v2client import algod
 from algosdk import transaction
-from algosdk.transaction import PaymentTxn, ApplicationCreateTxn, OnComplete, StateSchema, AssetConfigTxn
+from algosdk.atomic_transaction_composer import TransactionWithSigner
+from algosdk.future.transaction import StateSchema
+from algosdk.future import transaction as txn
 from algosdk.encoding import decode_address
 from dotenv import load_dotenv
 import base64
@@ -53,27 +56,45 @@ def create_app():
 
     params = algod_client.suggested_params()
 
-    create_txn = ApplicationCreateTxn(
+    create_txn = txn.ApplicationCreateTxn(
         sender=sender_address,
         sp=params,
-        on_complete=OnComplete.NoOpOC.real,
+        on_complete=txn.OnComplete.NoOpOC,
         approval_program=approval_program,
         clear_program=clear_program,
         global_schema=global_schema,
-        local_schema=local_schema,
+        local_schema=local_schema
     )
 
     signed = create_txn.sign(sender_private_key)
     txid = algod_client.send_transaction(signed)
     print("txid:", txid)
-    result = transaction.wait_for_confirmation(algod_client, txid, 4)
-    app_id = result['application-index']
+    # Wait until the transaction is confirmed
+    last_round = algod_client.status().get('last-round')
+    txinfo = None
+    while True:
+        try:
+            txinfo = algod_client.pending_transaction_info(txid)
+            if "application-index" in txinfo:
+                break
+            print("Waiting for confirmation...")
+        except Exception as e:
+            print(f"Error checking transaction: {e}")
+        last_round += 1
+        algod_client.status_after_block(last_round)
+        time.sleep(1)
+
+    if not txinfo or "application-index" not in txinfo:
+        print("Transaction info:", txinfo)
+        raise Exception("Failed to get application-index from transaction")
+
+    app_id = txinfo["application-index"]
     print("Deployed app id:", app_id)
     return app_id
 
 def create_asa():
     params = algod_client.suggested_params()
-    txn_ = AssetConfigTxn(
+    txn_ = txn.AssetConfigTxn(
         sender=sender_address,
         sp=params,
         total=1_000_000,
@@ -90,8 +111,26 @@ def create_asa():
     stxn = txn_.sign(sender_private_key)
     txid = algod_client.send_transaction(stxn)
     print("ASA create tx:", txid)
-    res = transaction.wait_for_confirmation(algod_client, txid, 4)
-    asset_id = res['asset-index']
+    # Wait until the transaction is confirmed
+    last_round = algod_client.status().get('last-round')
+    txinfo = None
+    while True:
+        try:
+            txinfo = algod_client.pending_transaction_info(txid)
+            if "asset-index" in txinfo:
+                break
+            print("Waiting for ASA creation confirmation...")
+        except Exception as e:
+            print(f"Error checking ASA transaction: {e}")
+        last_round += 1
+        algod_client.status_after_block(last_round)
+        time.sleep(1)
+
+    if not txinfo or "asset-index" not in txinfo:
+        print("ASA Transaction info:", txinfo)
+        raise Exception("Failed to get asset-index from transaction")
+
+    asset_id = txinfo["asset-index"]
     print("Created ASA id:", asset_id)
     return asset_id
 

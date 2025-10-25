@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { PeraWalletConnect } from '@perawallet/connect';
 import Stake from './pages/Stake';
+import Unstake from './pages/Unstake';
 import Claim from './pages/Claim';
 
 // Initialize the PeraWallet connector
@@ -157,6 +158,7 @@ const App: React.FC = () => {
 
         <Navigation>
           <NavLink to="/" active={isActive('/')}>Stake</NavLink>
+          <NavLink to="/unstake" active={isActive('/unstake')}>Unstake</NavLink>
           <NavLink to="/claim" active={isActive('/claim')}>Claim</NavLink>
         </Navigation>
 
@@ -166,8 +168,9 @@ const App: React.FC = () => {
       </Header>
 
       <Routes>
-        <Route path="/" element={<Stake accountAddress={accountAddress} peraWallet={peraWallet} />} />
-        <Route path="/claim" element={<Claim accountAddress={accountAddress} peraWallet={peraWallet} />} />
+        <Route path="/" element={<Stake />} />
+        <Route path="/unstake" element={<Unstake />} />
+        <Route path="/claim" element={<Claim />} />
       </Routes>
     </Container>
   );
