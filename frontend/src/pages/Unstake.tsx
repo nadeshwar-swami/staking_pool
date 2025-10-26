@@ -4,11 +4,11 @@ import { PeraWalletConnect } from '@perawallet/connect';
 import algosdk from 'algosdk';
 import { AppState, StakeError } from '../types';
 
+// Import app state from JSON
+import appStateJson from '../app_state.json';
+
 // App state with the contract IDs
-const appState: AppState = {
-  app_id: 748346211,
-  asset_id: 748346215
-};
+const appState: AppState = appStateJson;
 
 // Initialize Pera Wallet instance
 const peraWallet = new PeraWalletConnect({
@@ -18,6 +18,16 @@ const peraWallet = new PeraWalletConnect({
 
 // Algod client for TestNet
 const algod = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+
+// Helper function to decode application state keys
+const decodeState = (keyValue: any): string => {
+  try {
+    return new TextDecoder().decode(keyValue.key);
+  } catch (e) {
+    console.error('Error decoding key:', e);
+    return '';
+  }
+};
 
 // Styled components
 const Container = styled.div`
@@ -224,11 +234,12 @@ export default function Unstake() {
           if (appLocalState?.keyValue) {
             const keyValuePairs = appLocalState.keyValue;
             for (const pair of keyValuePairs) {
-              const key = new TextDecoder().decode(pair.key);
+              const key = decodeState(Buffer.from(pair.key).toString('base64'));
+              console.log('Decoded key:', key);
               if (key === 'S') {
                 const stakedAmount = (Number(pair.value.uint) / 1e6).toFixed(4);
+                console.log('Found staked amount:', stakedAmount);
                 setStakedBalance(stakedAmount);
-                console.log('Initial staked balance:', stakedAmount);
                 break;
               }
             }
@@ -258,57 +269,83 @@ export default function Unstake() {
   // Fetch staking info when account is connected
   useEffect(() => {
     const fetchStakingInfo = async () => {
-      if (accountAddress) {
-        try {
-          // Get user's local state for the app
-          const accountInfo = await algod.accountInformation(accountAddress).do();
-          const appLocalState = accountInfo.appsLocalState?.find(
-            (app: any) => app.id === appState.app_id
-          );
+      if (!accountAddress) {
+        setStakedBalance("0");
+        setUnlockTime(null);
+        return;
+      }
 
-          if (appLocalState?.keyValue) {
-            const keyValuePairs = appLocalState.keyValue;
-            let stakedAmount = "0";
-            let startTime = 0;
-            let stakePeriod = 0;
+      try {
+        console.log('Fetching state for app ID:', appState.app_id);
+        // Get the account's application info directly
+        const accountAppInfo = await algod.accountApplicationInformation(accountAddress, appState.app_id).do();
+        console.log('Raw account app info:', accountAppInfo);
+        
+        // Verify we got a response
+        if (!accountAppInfo) {
+          console.error('No application info returned');
+          return;
+        }
+        
+        const localState = accountAppInfo.appLocalState;
+        console.log('Local state:', localState);
+        
+        if (localState?.keyValue) {
+          const keyValuePairs = localState.keyValue;
+          let stakedAmount = "0";
+          let startTime = 0;
+          let stakePeriod = 0;
 
-            for (const pair of keyValuePairs) {
+          for (const pair of keyValuePairs) {
+            try {
+              // Directly decode the key
               const key = new TextDecoder().decode(pair.key);
-              if (key === 'S') { // Staked amount
-                stakedAmount = (Number(pair.value.uint) / 1e6).toFixed(4);
+              // Log the raw key and value for debugging
+              console.log('Raw key:', pair.key);
+              console.log('Processing key:', key);
+              console.log('Raw key value pair:', pair);
+              
+              if (key === 'S') {
+                stakedAmount = (Number(pair.value.uint) / 1e6).toFixed(6);
                 console.log('Found staked amount:', stakedAmount);
-              } else if (key === 'ST') { // Stake start time
+              } else if (key === 'ST') {
                 startTime = Number(pair.value.uint);
                 console.log('Found start time:', startTime);
-              } else if (key === 'SP') { // Stake period
+              } else if (key === 'SP') {
                 stakePeriod = Number(pair.value.uint);
                 console.log('Found stake period:', stakePeriod);
               }
-            }
-
-            setStakedBalance(stakedAmount);
-
-            if (startTime && stakePeriod) {
-              const unlockTimestamp = startTime + stakePeriod;
-              const now = Math.floor(Date.now() / 1000);
-              
-              if (now >= unlockTimestamp) {
-                setUnlockTime('Unlocked');
-              } else {
-                const remaining = unlockTimestamp - now;
-                const days = Math.floor(remaining / (24 * 60 * 60));
-                const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
-                setUnlockTime(`${days}d ${hours}h remaining`);
-              }
-            } else {
-              setUnlockTime(null);
+            } catch (err) {
+              console.error('Error processing key-value pair:', err);
             }
           }
-        } catch (err) {
-          console.error("Error fetching staking info:", err);
+
+          setStakedBalance(stakedAmount);
+
+          if (startTime && stakePeriod) {
+            const unlockTimestamp = startTime + stakePeriod;
+            const now = Math.floor(Date.now() / 1000);
+            
+            if (now >= unlockTimestamp) {
+              setUnlockTime('Unlocked');
+            } else {
+              const remaining = unlockTimestamp - now;
+              const days = Math.floor(remaining / (24 * 60 * 60));
+              const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
+              setUnlockTime(`${days}d ${hours}h remaining`);
+            }
+          } else {
+            setUnlockTime(null);
+          }
+        } else {
+          console.log('No local state found or not opted in');
           setStakedBalance("0");
           setUnlockTime(null);
         }
+      } catch (err) {
+        console.error("Error fetching staking info:", err);
+        setStakedBalance("0");
+        setUnlockTime(null);
       }
     };
 
