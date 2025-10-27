@@ -19,14 +19,67 @@ const peraWallet = new PeraWalletConnect({
 // Algod client for TestNet
 const algod = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
 
-// Helper function to decode application state keys
-const decodeState = (keyValue: any): string => {
+// Debug function to check account state directly on TestNet (no console logging)
+const debugCheckState = async (address: string, appId: number) => {
+  const accountInfo = await algod.accountInformation(address).do();
+  const localState = accountInfo.appsLocalState?.find((app: any) =>
+    typeof app.id === 'bigint' ? app.id.toString() === appId.toString() : Number(app.id) === appId
+  );
+  return { accountInfo, localState };
+};
+
+// Helper function to decode application state keys (handles base64 strings returned by algod)
+const decodeState = (keyInput: any): string => {
   try {
-    return new TextDecoder().decode(keyValue.key);
+    // If algod returned the key as a base64 string
+    if (typeof keyInput === 'string') {
+      return Buffer.from(keyInput, 'base64').toString('utf8');
+    }
+
+    // If passed the whole pair object with a `key` property
+    if (keyInput && typeof keyInput === 'object' && keyInput.key) {
+      if (typeof keyInput.key === 'string') {
+        return Buffer.from(keyInput.key, 'base64').toString('utf8');
+      }
+      if (keyInput.key instanceof Uint8Array) {
+        return new TextDecoder().decode(keyInput.key);
+      }
+    }
+
+    // If it's a Uint8Array
+    if (keyInput instanceof Uint8Array) {
+      return new TextDecoder().decode(keyInput);
+    }
+
+    // Fallback to string coercion
+    return String(keyInput || '');
   } catch (e) {
-    console.error('Error decoding key:', e);
+    // ignore decode errors
     return '';
   }
+};
+
+// (removed duplicate declaration)
+
+
+
+// Helper to locate the application's local state in various algod response shapes
+const findAppLocalState = (accountInfo: any, appId: number) => {
+  if (!accountInfo) return null;
+  const candidateKeys = ['appsLocalState', 'apps-local-state', 'apps_local_state', 'apps-localstate'];
+  for (const k of candidateKeys) {
+    const arr = (accountInfo as any)[k];
+    if (Array.isArray(arr)) {
+      for (const entry of arr) {
+        // try a few possible id property names
+        const idCandidates = [entry.id, entry['id'], entry['app-id'], entry['application-id'], entry['appId']];
+        for (const id of idCandidates) {
+          if (typeof id !== 'undefined' && Number(id) === Number(appId)) return entry;
+        }
+      }
+    }
+  }
+  return null;
 };
 
 // Styled components
@@ -201,6 +254,77 @@ export default function Unstake() {
   const [stakedBalance, setStakedBalance] = useState("0");
   const [unlockTime, setUnlockTime] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isOptingIn, setIsOptingIn] = useState(false);
+  const [hasOptedIn, setHasOptedIn] = useState(false);
+
+  const optInToApp = async () => {
+    if (!accountAddress) return;
+    
+      try {
+      setIsOptingIn(true);
+      setError(null);
+
+      // First check if already opted in
+      const accountInfo = await algod.accountInformation(accountAddress).do();
+      const alreadyOptedIn = Boolean(findAppLocalState(accountInfo, appState.app_id));
+
+      if (alreadyOptedIn) {
+        setHasOptedIn(true);
+        setError(null);
+        return;
+      }
+
+      // Get suggested params for the transaction
+      const params = await algod.getTransactionParams().do();
+      
+      // Create opt-in transaction
+      const optInTxn = algosdk.makeApplicationOptInTxnFromObject({
+        sender: accountAddress,
+        suggestedParams: params,
+        appIndex: appState.app_id,
+        foreignAssets: [appState.asset_id],
+        note: new Uint8Array(Buffer.from("opt-in to staking"))
+      });
+
+      // Get the transaction signed
+      const txnToSign = [{
+        txn: optInTxn,
+        signers: [accountAddress]
+      }];
+
+      // Sign and send the transaction
+      const signedTxn = await peraWallet.signTransaction([txnToSign]);
+      const response = await algod.sendRawTransaction(signedTxn).do();
+      
+  await algosdk.waitForConfirmation(algod, response.txid, 4);
+      
+      setHasOptedIn(true);
+      setError(null);
+    } catch (err: any) {
+  // opt-in error handled below
+      // Some nodes return a 400 saying "already opted in" from the pool; treat that as success
+      const msg = err?.message || (err?.response && err.response.text) || '';
+      if (typeof msg === 'string' && msg.toLowerCase().includes('already opted in')) {
+  // node reported already opted in; mark success
+        setHasOptedIn(true);
+        setError(null);
+        return;
+      }
+      if (err?.data?.type === 'CONNECT_MODAL_CLOSED') {
+        setError({
+          type: "user_rejected",
+          message: "Opt-in was rejected by user"
+        });
+      } else {
+        setError({
+          type: "transaction_failed",
+          message: err?.message || "Failed to opt in to the application"
+        });
+      }
+    } finally {
+      setIsOptingIn(false);
+    }
+  };
 
   const connectWallet = async () => {
     try {
@@ -210,7 +334,7 @@ export default function Unstake() {
         setAccountAddress(accounts[0]);
       }
     } catch (error: any) {
-      console.error("Connection error:", error);
+      // connection error: surface to UI
       setError({
         type: "transaction_failed",
         message: "Failed to connect wallet. Please try again."
@@ -228,24 +352,41 @@ export default function Unstake() {
         // Force an immediate fetch of staking info
         try {
           const accountInfo = await algod.accountInformation(accounts[0]).do();
-          const appLocalState = accountInfo.appsLocalState?.find(
-            (app: any) => app.id === appState.app_id
-          );
-          if (appLocalState?.keyValue) {
-            const keyValuePairs = appLocalState.keyValue;
+          const appLocalState = findAppLocalState(accountInfo, appState.app_id);
+          if (appLocalState) {
+            // support both camelCase and dashed keys from algod responses
+            const keyValuePairs = appLocalState.keyValue ?? (appLocalState as any)['key-value'] ?? [];
             for (const pair of keyValuePairs) {
-              const key = decodeState(Buffer.from(pair.key).toString('base64'));
-              console.log('Decoded key:', key);
-              if (key === 'S') {
-                const stakedAmount = (Number(pair.value.uint) / 1e6).toFixed(4);
-                console.log('Found staked amount:', stakedAmount);
-                setStakedBalance(stakedAmount);
-                break;
+                const key = decodeState(pair.key).trim();
+                if (key === 'S') {
+                  let rawAmount = 0;
+                  if (pair.value && typeof pair.value.uint !== 'undefined') {
+                    rawAmount = Number(pair.value.uint);
+                  } else if (pair.value && pair.value.bytes) {
+                    // pair.value.bytes can be a base64 string or a Uint8Array depending on SDK version/response shape
+                    let buf: Buffer;
+                    if (typeof pair.value.bytes === 'string') {
+                      buf = Buffer.from(pair.value.bytes, 'base64');
+                    } else if (pair.value.bytes instanceof Uint8Array) {
+                      buf = Buffer.from(pair.value.bytes);
+                    } else {
+                      // fallback: coerce to Buffer
+                      buf = Buffer.from(String(pair.value.bytes || ''), 'base64');
+                    }
+                    let n = 0n;
+                    for (const b of buf) {
+                      n = (n << 8n) + BigInt(b);
+                    }
+                    rawAmount = Number(n);
+                  }
+                  const stakedAmount = (rawAmount / 1e6).toFixed(6);
+                  setStakedBalance(stakedAmount);
+                  break;
+                }
               }
-            }
           }
         } catch (err) {
-          console.error('Error fetching initial staking info:', err);
+          // initial staking info fetch failed; surface via UI state
         }
       }
     });
@@ -266,7 +407,7 @@ export default function Unstake() {
     };
   }, []);
 
-  // Fetch staking info when account is connected
+  // Fetch staking info when account is connected (run once on account change)
   useEffect(() => {
     const fetchStakingInfo = async () => {
       if (!accountAddress) {
@@ -276,83 +417,92 @@ export default function Unstake() {
       }
 
       try {
-        console.log('Fetching state for app ID:', appState.app_id);
-        // Get the account's application info directly
-        const accountAppInfo = await algod.accountApplicationInformation(accountAddress, appState.app_id).do();
-        console.log('Raw account app info:', accountAppInfo);
-        
-        // Verify we got a response
-        if (!accountAppInfo) {
-          console.error('No application info returned');
+        // First get the account information to check if they've opted in
+        const accountInfo = await algod.accountInformation(accountAddress).do();
+
+        // Find the app local state regardless of response shape
+        const appLocalState = findAppLocalState(accountInfo, appState.app_id);
+
+        const hasOptedIn = Boolean(appLocalState);
+        setHasOptedIn(hasOptedIn);
+
+        if (!hasOptedIn) {
+          setError({
+            type: "transaction_failed",
+            message: "Please opt into the application first"
+          });
+          setStakedBalance("0");
+          setUnlockTime(null);
           return;
         }
-        
-        const localState = accountAppInfo.appLocalState;
-        console.log('Local state:', localState);
-        
-        if (localState?.keyValue) {
-          const keyValuePairs = localState.keyValue;
-          let stakedAmount = "0";
-          let startTime = 0;
-          let stakePeriod = 0;
 
-          for (const pair of keyValuePairs) {
-            try {
-              // Directly decode the key
-              const key = new TextDecoder().decode(pair.key);
-              // Log the raw key and value for debugging
-              console.log('Raw key:', pair.key);
-              console.log('Processing key:', key);
-              console.log('Raw key value pair:', pair);
-              
-              if (key === 'S') {
-                stakedAmount = (Number(pair.value.uint) / 1e6).toFixed(6);
-                console.log('Found staked amount:', stakedAmount);
-              } else if (key === 'ST') {
-                startTime = Number(pair.value.uint);
-                console.log('Found start time:', startTime);
-              } else if (key === 'SP') {
-                stakePeriod = Number(pair.value.uint);
-                console.log('Found stake period:', stakePeriod);
+        const localState = appLocalState;
+        if (!localState) return;
+
+        const keyValuePairs = localState.keyValue ?? (localState as any)['key-value'] ?? [];
+        let stakedAmount = "0";
+        let startTime = 0;
+        let stakePeriod = 0;
+
+        for (const pair of keyValuePairs) {
+          try {
+            const key = decodeState(pair.key).trim();
+            if (key === 'S') {
+              let rawAmount = 0;
+              if (pair.value && typeof pair.value.uint !== 'undefined') {
+                rawAmount = Number(pair.value.uint);
+              } else if (pair.value && pair.value.bytes) {
+                let buf: Buffer;
+                if (typeof pair.value.bytes === 'string') {
+                  buf = Buffer.from(pair.value.bytes, 'base64');
+                } else if (pair.value.bytes instanceof Uint8Array) {
+                  buf = Buffer.from(pair.value.bytes);
+                } else {
+                  buf = Buffer.from(String(pair.value.bytes || ''), 'base64');
+                }
+                let n = 0n;
+                for (const b of buf) {
+                  n = (n << 8n) + BigInt(b);
+                }
+                rawAmount = Number(n);
               }
-            } catch (err) {
-              console.error('Error processing key-value pair:', err);
+              stakedAmount = (rawAmount / 1e6).toFixed(6);
+            } else if (key === 'ST') {
+              startTime = Number(pair.value.uint);
+            } else if (key === 'SP') {
+              stakePeriod = Number(pair.value.uint);
             }
+          } catch (err) {
+            // ignore pair parse error
           }
+        }
 
-          setStakedBalance(stakedAmount);
+        setStakedBalance(stakedAmount);
 
-          if (startTime && stakePeriod) {
-            const unlockTimestamp = startTime + stakePeriod;
-            const now = Math.floor(Date.now() / 1000);
-            
-            if (now >= unlockTimestamp) {
-              setUnlockTime('Unlocked');
-            } else {
-              const remaining = unlockTimestamp - now;
-              const days = Math.floor(remaining / (24 * 60 * 60));
-              const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
-              setUnlockTime(`${days}d ${hours}h remaining`);
-            }
+        if (startTime && stakePeriod) {
+          const unlockTimestamp = startTime + stakePeriod;
+          const now = Math.floor(Date.now() / 1000);
+          if (now >= unlockTimestamp) {
+            setUnlockTime('Unlocked');
           } else {
-            setUnlockTime(null);
+            const remaining = unlockTimestamp - now;
+            const days = Math.floor(remaining / (24 * 60 * 60));
+            const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
+            setUnlockTime(`${days}d ${hours}h remaining`);
           }
         } else {
-          console.log('No local state found or not opted in');
-          setStakedBalance("0");
           setUnlockTime(null);
         }
       } catch (err) {
-        console.error("Error fetching staking info:", err);
+        // fetch failed: set safe defaults
         setStakedBalance("0");
         setUnlockTime(null);
       }
     };
 
     fetchStakingInfo();
-    const interval = setInterval(fetchStakingInfo, 10000); // Refresh every 10 seconds
-    
-    return () => clearInterval(interval);
+    // No polling: run once when accountAddress changes
+    return () => {};
   }, [accountAddress]);
 
   const handleUnstake = async () => {
@@ -380,9 +530,21 @@ export default function Unstake() {
       return;
     }
 
+    // Check if stake is unlocked
+    if (unlockTime && unlockTime !== 'Unlocked') {
+      setError({
+        type: "transaction_failed",
+        message: "Stake is still locked. " + unlockTime
+      });
+      return;
+    }
+
     try {
       setIsUnstaking(true);
       setError(null);
+
+  // Convert amount to microalgos with proper decimal handling
+  const withdrawAmount = BigInt(Math.round(Number(amount) * 1e6));
 
       // Get suggested params for transactions
       const params = await algod.getTransactionParams().do();
@@ -394,7 +556,7 @@ export default function Unstake() {
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
         appArgs: [
           new Uint8Array(Buffer.from("withdraw")),
-          new Uint8Array(new BigUint64Array([BigInt(Math.floor(Number(amount) * 1e6))]).buffer)
+          algosdk.encodeUint64(withdrawAmount)
         ],
         foreignAssets: [appState.asset_id], // Include reward asset
         suggestedParams: params
@@ -415,7 +577,6 @@ export default function Unstake() {
       setError(null);
 
     } catch (err: any) {
-      console.error("Unstaking error:", err);
       if (err?.data?.type === 'CONNECT_MODAL_CLOSED') {
         setError({
           type: "user_rejected",
@@ -489,6 +650,8 @@ export default function Unstake() {
             <InfoValue>{stakedBalance} ALGO</InfoValue>
           </InfoBox>
 
+          {/* Debug button removed */}
+
           {error && (
             <ErrorMessage>{error.message}</ErrorMessage>
           )}
@@ -499,6 +662,13 @@ export default function Unstake() {
               disabled={isConnecting}
             >
               {isConnecting ? "Connecting..." : "Connect Wallet to Unstake"}
+            </UnstakeButton>
+          ) : !hasOptedIn ? (
+            <UnstakeButton
+              onClick={optInToApp}
+              disabled={isOptingIn}
+            >
+              {isOptingIn ? "Opting in..." : "Opt in to Staking"}
             </UnstakeButton>
           ) : (
             <UnstakeButton 
