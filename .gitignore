@@ -11,10 +11,6 @@ __pycache__/
 .Python
 *.pyc
 
-# Deployment state (may contain sensitive contract IDs)
-app_state.json
-scripts/app_state.json
-
 # Next.js build output
 frontend/.next/
 frontend/out/
