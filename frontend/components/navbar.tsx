@@ -30,41 +30,41 @@ export function Navbar() {
       }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="hover:opacity-80 transition-opacity font-bold text-xl">
+        <div className="flex h-20 items-center justify-between">
+          <Link href="/" className="hover:opacity-80 transition-opacity font-bold text-2xl">
             <span className="text-primary text-left">NaanFi</span>
           </Link>
 
           {(isHomepage || isFaqPage) ? (
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/" className="text-base font-medium hover:text-primary transition-colors">
                 Home
               </Link>
-              <a href="https://github.com/NaanFi" target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="https://github.com/NaanFi" target="_blank" rel="noopener noreferrer" className="text-base font-medium hover:text-primary transition-colors">
                 Docs
               </a>
-              <Link href="/faq" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/faq" className="text-base font-medium hover:text-primary transition-colors">
                 FAQ
               </Link>
-              <a href="https://algorand.co/" target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="https://algorand.co/" target="_blank" rel="noopener noreferrer" className="text-base font-medium hover:text-primary transition-colors">
                 Algorand
               </a>
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/" className="text-base font-medium hover:text-primary transition-colors">
                 Home
               </Link>
-              <Link href="/stake" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/stake" className="text-base font-medium hover:text-primary transition-colors">
                 Stake
               </Link>
-              <Link href="/claim" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/claim" className="text-base font-medium hover:text-primary transition-colors">
                 Unstake
               </Link>
-              <Link href="/claim-nft" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/claim-nft" className="text-base font-medium hover:text-primary transition-colors">
                 Claim NFT
               </Link>
-              <Link href="/marketplace" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/marketplace" className="text-base font-medium hover:text-primary transition-colors">
                 Marketplace
               </Link>
             </div>
