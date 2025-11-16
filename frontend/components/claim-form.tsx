@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -49,12 +51,12 @@ export function ClaimForm() {
   }
 
   async function waitForConfirmation(txId: string, timeout = 20) {
-            // Lock-in period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
+    const start = Date.now()
     while (true) {
       try {
         const info = await algodClient.pendingTransactionInformation(txId).do()
         const cr = (info as any)['confirmed-round'] ?? (info as any).confirmedRound
-              lockPeriod = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
+        if (cr && cr > 0) return info
       } catch (e) {}
       if ((Date.now() - start) / 1000 > timeout) throw new Error('Timed out waiting for confirmation')
       await new Promise((r) => setTimeout(r, 1000))
@@ -68,7 +70,7 @@ export function ClaimForm() {
     if (!assetId) return
     if (!/^[0-9]+$/.test(assetId)) {
       setStatusMessage('Enter a valid numeric asset id')
-        console.log('Search complete. Found:', found, 'Lock-in period:', lockPeriod)
+      setStatusType('error')
       return
     }
 
@@ -116,26 +118,11 @@ export function ClaimForm() {
             console.log('Matched! Start time:', startTime)
           }
         } else if (key.startsWith('NFT_P_')) {
-<<<<<<< HEAD
-          // Lock period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
-=======
           // Lock-in period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
->>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
           const assetIdBytes = keyBuffer.slice(6)
           metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
           console.log('Found NFT_P_ key for asset:', metaAssetId)
           if (metaAssetId === Number(assetId)) {
-<<<<<<< HEAD
-            lockPeriod = kv.value.uint
-            console.log('Matched! Lock period:', lockPeriod)
-          }
-        } else if (key.startsWith('NFT_A_')) {
-          // Amount: NFT_A_ prefix (6 bytes) + 8-byte asset ID
-          const assetIdBytes = keyBuffer.slice(6)
-          metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
-          if (metaAssetId === Number(assetId)) {
-            stakedAmount = kv.value.uint
-=======
             lockPeriod = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
             console.log('Matched! Lock-in period:', lockPeriod)
           }
@@ -145,17 +132,12 @@ export function ClaimForm() {
           metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
           if (metaAssetId === Number(assetId)) {
             stakedAmount = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
->>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
             console.log('Matched! Staked amount:', stakedAmount)
           }
         }
       }
       
-<<<<<<< HEAD
-      console.log('Search complete. Found:', found, 'Lock period:', lockPeriod)
-=======
       console.log('Search complete. Found:', found, 'Lock-in period:', lockPeriod)
->>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
       
       if (!found) {
         setStatusMessage(`This NFT (${assetId}) does not have an active staking position. Make sure you entered the correct asset ID and that this NFT was created by staking through this contract. Check the browser console for debugging info.`)
@@ -373,3 +355,4 @@ export function ClaimForm() {
     </Card>
   )
 }
+          {isProcessing ? 'Processing...' : 'Redeem'}
