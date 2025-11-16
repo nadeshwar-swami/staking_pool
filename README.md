@@ -221,6 +221,52 @@ Comprehensive documentation is available in the `docs/` folder:
 - Clawbacks NFT from holder to app
 - Deletes global state mappings
 
+## **Latest Smart Contract Version & Deploy**
+
+- **Stable (TEAL v6)**: the current production-ready flow uses the PyTEAL contract at `src/staking_app.py` and the deploy helper `scripts/deploy_with_asa.py`.
+  - Requirements: Python dependencies from `requirements.txt`, an Algod RPC (see `.env.example`) and a deployer mnemonic in `SENDER_MNEMONIC`.
+  - Quick deploy (TestNet):
+
+    ```powershell
+    # copy env template and edit .env with your mnemonic
+    Copy-Item .\.env.example .\.env -Force
+
+    # install python deps
+    pip install -r requirements.txt
+
+    # deploy (omit arg to auto-create the reward ASA 'NaanFi')
+    python .\scripts\deploy_with_asa.py [REWARD_ASSET_ID]
+    ```
+
+  - Notes:
+    - If you omit `REWARD_ASSET_ID`, `deploy_with_asa.py` will create a `NaanFi` ASA and wire it to the new app.
+    - The script writes `app_state.json` (root) containing `app_id` and `asset_id` — the frontend reads this file by default.
+    - If the app needs a final top-up or the ASA opt-in failed due to a low app balance, run:
+
+    ```powershell
+    python .\scripts\fund_and_optin_app.py
+    ```
+
+- **Experimental (AVM8 / Boxes)**: a box-based design that stores per-NFT metadata in Algorand Boxes is available as an experimental draft in `scripts/real_staking_contract.py`.
+  - This design requires TEAL v8 support (PyTEAL + algod that can compile TEAL v8). Use `scripts/deploy_box_app.py` to attempt deployment:
+
+    ```powershell
+    # Ensure your env (.env or environment) contains ALGOD_ADDRESS, ALGOD_TOKEN (optional) and SENDER_MNEMONIC
+    python .\scripts\deploy_box_app.py
+    ```
+
+  - Caveats:
+    - `real_staking_contract.py` and box-based deployment are **experimental** — only use for testing on TestNet.
+    - If the script falls back or aborts with a TEAL compile error, upgrade PyTEAL and ensure your Algod node supports TEAL v8.
+    - Do **not** deploy the AVM8 contract to MainNet without a professional audit.
+
+Common env variables (see `.env.example`): `ALGOD_ADDRESS`, `ALGOD_TOKEN`, `SENDER_MNEMONIC`.
+
+Common troubleshooting tips:
+- If you see an opt-in failure referencing the app account balance, fund the app with a small ALGO amount (scripts handle this automatically during deploy but `fund_and_optin_app.py` can retry top-ups).
+- For transient algod network errors, re-run the deploy command — public algod endpoints occasionally return timeouts.
+
+
 ### Frontend (React + TypeScript)
 
 **Pages**:
