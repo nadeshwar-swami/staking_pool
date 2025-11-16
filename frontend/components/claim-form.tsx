@@ -112,8 +112,15 @@ export function ClaimForm() {
         }
       }
       
-      if (!found || !lockPeriod) {
+      if (!found) {
         setStatusMessage('This NFT does not have an active staking position. Make sure you entered the correct asset ID.')
+        setStatusType('error')
+        setIsProcessing(false)
+        return
+      }
+      
+      if (!lockPeriod) {
+        setStatusMessage('Unable to retrieve lock period for this NFT. It may have already been redeemed.')
         setStatusType('error')
         setIsProcessing(false)
         return
@@ -123,9 +130,26 @@ export function ClaimForm() {
       const endTime = startTime + lockPeriod
       
       if (now < endTime) {
-        const daysLeft = Math.ceil((endTime - now) / 86400)
-        setStatusMessage(`⏳ Your staking position is still locked. You can redeem in ${daysLeft} day(s). Lock period ends on ${new Date(endTime * 1000).toLocaleString()}.`)
-        setStatusType('error')
+        const secondsLeft = endTime - now
+        const daysLeft = Math.floor(secondsLeft / 86400)
+        const hoursLeft = Math.floor((secondsLeft % 86400) / 3600)
+        const minutesLeft = Math.floor((secondsLeft % 3600) / 60)
+        
+        let timeLeftStr = ''
+        if (daysLeft > 0) {
+          timeLeftStr = `${daysLeft} day(s) ${hoursLeft} hour(s)`
+        } else if (hoursLeft > 0) {
+          timeLeftStr = `${hoursLeft} hour(s) ${minutesLeft} minute(s)`
+        } else {
+          timeLeftStr = `${minutesLeft} minute(s)`
+        }
+        
+        const lockDays = Math.floor(lockPeriod / 86400)
+        const startDate = new Date(startTime * 1000).toLocaleString()
+        const endDate = new Date(endTime * 1000).toLocaleString()
+        
+        setStatusMessage(`📋 Staking Position Info:\n\n🔒 Lock Period: ${lockDays} days\n📅 Started: ${startDate}\n⏰ Matures: ${endDate}\n⏳ Time Remaining: ${timeLeftStr}\n\n✅ You can redeem this NFT after the maturity date.`)
+        setStatusType('info')
         setIsProcessing(false)
         return
       }
@@ -297,7 +321,7 @@ export function ClaimForm() {
         {/* Status message */}
         {statusMessage && (
           <Alert className={`mt-4 ${statusType === 'error' ? 'border border-red-500/20 bg-red-500/5' : statusType === 'success' ? 'border border-green-500/20 bg-green-500/5' : 'border border-blue-500/20 bg-blue-500/5'}`}>
-            <AlertDescription className="ml-2">
+            <AlertDescription className="ml-2 whitespace-pre-line">
               {statusMessage}
             </AlertDescription>
           </Alert>
