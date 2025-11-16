@@ -21,7 +21,6 @@ export interface NFTItem {
   seller: string // seller wallet address
 }
 
-const STORAGE_KEY = 'marketplace_nft_listings'
 const ALGOD_SERVER = "https://testnet-api.algonode.cloud"
 const ALGOD_TOKEN = ""
 
@@ -147,31 +146,23 @@ export default function MarketplacePage() {
   const [isLoading, setIsLoading] = useState(true)
   const { walletAddress } = useWallet()
 
-  // Load listings from localStorage on mount
+  // Fetch all listings from API on mount
   useEffect(() => {
-    console.log('Loading listings from localStorage...')
-    const storedListings = localStorage.getItem(STORAGE_KEY)
-    console.log('Stored listings:', storedListings)
-    
-    if (storedListings) {
-      try {
-        const parsed = JSON.parse(storedListings)
-        console.log('Parsed listings:', parsed)
-        setNfts(parsed)
-      } catch (error) {
-        console.error('Failed to parse stored listings:', error)
-      }
-    }
-    setIsLoading(false)
+    fetchListings()
   }, [])
 
-  // Save listings to localStorage whenever they change
-  useEffect(() => {
-    if (!isLoading) {
-      console.log('Saving listings to localStorage:', nfts.length, 'items')
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nfts))
+  const fetchListings = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/listings')
+      const data = await response.json()
+      setNfts(data.listings || [])
+    } catch (error) {
+      console.error('Failed to fetch listings:', error)
+    } finally {
+      setIsLoading(false)
     }
-  }, [nfts, isLoading])
+  }
 
   const handleSellNFT = async (nftAssetId: string, price: string) => {
     try {
@@ -218,7 +209,21 @@ export default function MarketplacePage() {
       }
 
       console.log('Created NFT listing:', newNFT)
-      setNfts([...nfts, newNFT])
+      
+      // Save to API
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNFT)
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create listing')
+      }
+      
+      // Refresh listings from server
+      await fetchListings()
     } catch (error: any) {
       console.error('Error creating listing:', error)
       alert(`Failed to create listing: ${error?.message || 'Unknown error'}. Please check the browser console for details.`)
@@ -248,8 +253,19 @@ export default function MarketplacePage() {
       )
 
       if (confirmed) {
-        // Remove the NFT from listings when bought
-        setNfts(nfts.filter(n => n.id !== nftId))
+        // Remove the NFT from listings via API
+        const response = await fetch('/api/listings', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: nftId })
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to remove listing')
+        }
+        
+        // Refresh listings from server
+        await fetchListings()
         
         // Show success message
         alert(
@@ -273,7 +289,16 @@ export default function MarketplacePage() {
       <section className="flex-1 py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-7xl">
           <MarketplaceHeader onSellNFT={handleSellNFT} />
-          <NftListing nfts={nfts} onBuyNFT={handleBuyNFT} />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-4 text-muted-foreground">Loading listings...</p>
+              </div>
+            </div>
+          ) : (
+            <NftListing nfts={nfts} onBuyNFT={handleBuyNFT} />
+          )}
         </div>
       </section>
 

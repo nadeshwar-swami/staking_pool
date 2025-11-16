@@ -511,7 +511,6 @@ export function StakingForm() {
                                             const info = await algodClient.pendingTransactionInformation(txId).do()
                                             const createdId = findCreatedAssetId(info)
                                             if (createdId) {
-                                              setCreatedAssetId(Number(createdId))
                                               try { localStorage.setItem('pendingNFTClaim', String(createdId)) } catch (e) {}
                                               setStatusMessage(`✅ Stake confirmed! NFT Asset ID ${createdId} created. Complete the 2-step claim process below to receive your NFT.`)
                                             } else {
@@ -660,12 +659,23 @@ export function StakingForm() {
         }
       }
 
-      // assign group id
+      // assign group id using the same SDK instance we used to build/encode txns
       if (!payTxn) {
         throw new Error('Payment transaction was not constructed')
       }
       const txns = [payTxn, appTxn]
-      algosdk.assignGroupID(txns)
+      try {
+        if (runtimeSdk && typeof runtimeSdk.assignGroupID === 'function') {
+          runtimeSdk.assignGroupID(txns)
+        } else if ((algosdk as any).assignGroupID) {
+          ;(algosdk as any).assignGroupID(txns)
+        } else {
+          throw new Error('assignGroupID not available on algosdk/runtimeSdk')
+        }
+      } catch (assignErr) {
+        console.warn('assignGroupID failed on runtimeSdk, falling back to algosdk:', assignErr)
+        ;(algosdk as any).assignGroupID(txns)
+      }
 
       // Try canonical encoder utility (fallback). If it fails, fall back to runtime encoder.
       let unsignedB64: string[] = []
@@ -735,44 +745,68 @@ export function StakingForm() {
 
       if (!signed) throw new Error('Signing failed or was cancelled')
 
-      // Normalize signed result to array of Uint8Array
-      let signedBlobs: Uint8Array[] = []
-      // Handle several possible shapes from Pera
-      if (Array.isArray(signed)) {
-        // several possible shapes: array of base64 strings, array of Uint8Array, array of objects with .blob, or nested groups
-        try {
-          if (signed.length && typeof (signed as any[])[0] === 'string') {
-            signedBlobs = (signed as any[]).map((s: any) => base64ToUint8Array(String(s)))
-          } else if (signed.length && (signed as any[])[0] instanceof Uint8Array) {
-            signedBlobs = signed as Uint8Array[]
-          } else if (signed.length && (signed as any[])[0] && (signed as any[])[0].blob) {
-            signedBlobs = (signed as any[]).map((s: any) => base64ToUint8Array(s.blob))
-          } else {
-            // try to flatten nested groups
-            const flat: string[] = []
-            for (const g of signed as any[]) {
-              if (Array.isArray(g)) {
-                for (const s of g) {
-                  if (typeof s === 'string') flat.push(s)
-                  else if (s && s.blob) flat.push(s.blob)
-                }
-              }
-            }
-            if (flat.length) signedBlobs = flat.map((s) => base64ToUint8Array(s))
-          }
-        } catch (e) {
-          // fall through to other handlers
-        }
-      } else if (signed && (signed as any).signedTransactions) {
-        const arr = (signed as any).signedTransactions as string[]
-        signedBlobs = arr.map((s) => base64ToUint8Array(s))
-      }
-      
+      // Normalize signed result to an array that preserves positions for each txn in the group.
+      // Some wallets return nested groups, arrays with null placeholders, or flat arrays. Preserve
+      // index positions so we can detect which specific txns are missing signatures.
+      let signedBlobs: Array<Uint8Array | null> = new Array(txns.length).fill(null)
 
-      if (!signedBlobs.length) throw new Error('No signed transactions returned')
+      const tryConvert = (item: any) => {
+        if (!item && item !== 0) return null
+        if (typeof item === 'string') return base64ToUint8Array(item)
+        if (item instanceof Uint8Array) return item
+        if (item && typeof item === 'object') {
+          if (item.blob) return base64ToUint8Array(item.blob)
+          if (item.signedTransaction) return base64ToUint8Array(item.signedTransaction)
+          if (item.txn && item.blob === undefined && typeof item.txn === 'string') return base64ToUint8Array(item.txn)
+        }
+        return null
+      }
+
+      try {
+        if (Array.isArray(signed)) {
+          // If wallet returned a nested grouping like [[...]] where inner length matches txns
+          if (signed.length === 1 && Array.isArray(signed[0]) && (signed[0] as any[]).length === txns.length) {
+            for (let i = 0; i < txns.length; i++) signedBlobs[i] = tryConvert((signed[0] as any[])[i])
+          } else if (signed.length === txns.length) {
+            for (let i = 0; i < txns.length; i++) signedBlobs[i] = tryConvert((signed as any[])[i])
+          } else {
+            // Try to flatten and assign in-order; preserve nulls if count doesn't match
+            const flat = (signed as any[]).flat(10)
+            if (flat.length === txns.length) {
+              for (let i = 0; i < txns.length; i++) signedBlobs[i] = tryConvert(flat[i])
+            } else {
+              // If we cannot map reliably, still try to coerce any convertible entries into sequence
+              const converted: Uint8Array[] = []
+              for (const s of flat) {
+                const c = tryConvert(s)
+                if (c) converted.push(c)
+              }
+              // place converted blobs at the start (best-effort) so we surface a clearer error
+              for (let i = 0; i < Math.min(converted.length, txns.length); i++) signedBlobs[i] = converted[i]
+            }
+          }
+        } else if (signed && (signed as any).signedTransactions) {
+          const arr = (signed as any).signedTransactions as string[]
+          for (let i = 0; i < Math.min(arr.length, txns.length); i++) signedBlobs[i] = base64ToUint8Array(arr[i])
+        }
+      } catch (normErr) {
+        // fallthrough to post-check
+      }
+
+      const present = signedBlobs.map((b, i) => ({ idx: i, present: !!b }))
+      const missing = present.filter(p => !p.present).map(p => p.idx)
+
+      if (missing.length) {
+        // include raw signed response in the log to aid debugging (safe in dev)
+        console.error('Signed blobs count does not match transaction count', { signedShape: signed, expected: txns.length, missingIndexes: missing })
+        throw new Error(`Incomplete signatures returned by wallet: missing signatures for tx indexes: ${missing.join(', ')}`)
+      }
+
+      // At this point all entries are non-null — cast to Uint8Array[] for submission
+      const finalSigned = signedBlobs as Uint8Array[]
 
       // submit raw signed txns
-      const sendResult = await algodClient.sendRawTransaction(signedBlobs).do()
+      const sendResult = await algodClient.sendRawTransaction(finalSigned).do()
       const txId = (sendResult as any).txid || (sendResult as any).txId || (sendResult as any).txID
       if (!txId) throw new Error('No txid from send')
 
