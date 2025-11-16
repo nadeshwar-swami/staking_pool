@@ -90,30 +90,53 @@ export function ClaimForm() {
       
       let startTime = 0
       let lockPeriod = 0
+      let stakedAmount = 0
       let found = false
+      
+      console.log('Looking for NFT asset ID:', assetId)
+      console.log('Global state entries:', globalState.length)
       
       for (const kv of globalState) {
         const keyBuffer = Buffer.from(kv.key, 'base64')
         const key = keyBuffer.toString('utf8')
         
+        // Try to extract asset ID from the key
+        let metaAssetId = 0
+        
         if (key.startsWith('NFT_ST_')) {
+          // Start time: NFT_ST_ prefix (7 bytes) + 8-byte asset ID
           const assetIdBytes = keyBuffer.slice(7)
-          const metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          console.log('Found NFT_ST_ key for asset:', metaAssetId)
           if (metaAssetId === Number(assetId)) {
             startTime = kv.value.uint
             found = true
+            console.log('Matched! Start time:', startTime)
           }
         } else if (key.startsWith('NFT_P_')) {
+          // Lock period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
           const assetIdBytes = keyBuffer.slice(6)
-          const metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          console.log('Found NFT_P_ key for asset:', metaAssetId)
           if (metaAssetId === Number(assetId)) {
             lockPeriod = kv.value.uint
+            console.log('Matched! Lock period:', lockPeriod)
+          }
+        } else if (key.startsWith('NFT_A_')) {
+          // Amount: NFT_A_ prefix (6 bytes) + 8-byte asset ID
+          const assetIdBytes = keyBuffer.slice(6)
+          metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          if (metaAssetId === Number(assetId)) {
+            stakedAmount = kv.value.uint
+            console.log('Matched! Staked amount:', stakedAmount)
           }
         }
       }
       
+      console.log('Search complete. Found:', found, 'Lock period:', lockPeriod)
+      
       if (!found) {
-        setStatusMessage('This NFT does not have an active staking position. Make sure you entered the correct asset ID.')
+        setStatusMessage(`This NFT (${assetId}) does not have an active staking position. Make sure you entered the correct asset ID and that this NFT was created by staking through this contract. Check the browser console for debugging info.`)
         setStatusType('error')
         setIsProcessing(false)
         return
