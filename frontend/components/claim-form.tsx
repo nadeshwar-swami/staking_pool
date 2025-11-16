@@ -49,12 +49,12 @@ export function ClaimForm() {
   }
 
   async function waitForConfirmation(txId: string, timeout = 20) {
-    const start = Date.now()
+            // Lock-in period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
     while (true) {
       try {
         const info = await algodClient.pendingTransactionInformation(txId).do()
         const cr = (info as any)['confirmed-round'] ?? (info as any).confirmedRound
-        if (cr && cr > 0) return info
+              lockPeriod = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
       } catch (e) {}
       if ((Date.now() - start) / 1000 > timeout) throw new Error('Timed out waiting for confirmation')
       await new Promise((r) => setTimeout(r, 1000))
@@ -68,7 +68,7 @@ export function ClaimForm() {
     if (!assetId) return
     if (!/^[0-9]+$/.test(assetId)) {
       setStatusMessage('Enter a valid numeric asset id')
-      setStatusType('error')
+        console.log('Search complete. Found:', found, 'Lock-in period:', lockPeriod)
       return
     }
 
@@ -86,7 +86,9 @@ export function ClaimForm() {
       // First, check if the position has matured
       const appId = (appState as any).app_id
       const appInfo: any = await algodClient.getApplicationByID(appId).do()
-      const globalState = appInfo.params['global-state'] || []
+      console.log('App info keys:', Object.keys(appInfo))
+      console.log('Params keys:', Object.keys(appInfo.params || {}))
+      const globalState = appInfo.params?.globalState || appInfo.params?.['global-state'] || appInfo['global-state'] || []
       
       let startTime = 0
       let lockPeriod = 0
@@ -109,16 +111,21 @@ export function ClaimForm() {
           metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
           console.log('Found NFT_ST_ key for asset:', metaAssetId)
           if (metaAssetId === Number(assetId)) {
-            startTime = kv.value.uint
+            startTime = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
             found = true
             console.log('Matched! Start time:', startTime)
           }
         } else if (key.startsWith('NFT_P_')) {
+<<<<<<< HEAD
           // Lock period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
+=======
+          // Lock-in period: NFT_P_ prefix (6 bytes) + 8-byte asset ID
+>>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
           const assetIdBytes = keyBuffer.slice(6)
           metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
           console.log('Found NFT_P_ key for asset:', metaAssetId)
           if (metaAssetId === Number(assetId)) {
+<<<<<<< HEAD
             lockPeriod = kv.value.uint
             console.log('Matched! Lock period:', lockPeriod)
           }
@@ -128,12 +135,27 @@ export function ClaimForm() {
           metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
           if (metaAssetId === Number(assetId)) {
             stakedAmount = kv.value.uint
+=======
+            lockPeriod = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
+            console.log('Matched! Lock-in period:', lockPeriod)
+          }
+        } else if (key.startsWith('NFT_S_')) {
+          // Amount: NFT_S_ prefix (6 bytes) + 8-byte asset ID (checking NFT_S_ not NFT_A_)
+          const assetIdBytes = keyBuffer.slice(6)
+          metaAssetId = Number(BigInt('0x' + assetIdBytes.toString('hex')))
+          if (metaAssetId === Number(assetId)) {
+            stakedAmount = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
+>>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
             console.log('Matched! Staked amount:', stakedAmount)
           }
         }
       }
       
+<<<<<<< HEAD
       console.log('Search complete. Found:', found, 'Lock period:', lockPeriod)
+=======
+      console.log('Search complete. Found:', found, 'Lock-in period:', lockPeriod)
+>>>>>>> 2f810aa (UI: align Claim NFT help and stake page layout tweaks; move 'What Happens Next?' card)
       
       if (!found) {
         setStatusMessage(`This NFT (${assetId}) does not have an active staking position. Make sure you entered the correct asset ID and that this NFT was created by staking through this contract. Check the browser console for debugging info.`)
@@ -143,7 +165,7 @@ export function ClaimForm() {
       }
       
       if (!lockPeriod) {
-        setStatusMessage('Unable to retrieve lock period for this NFT. It may have already been redeemed.')
+        setStatusMessage('Unable to retrieve lock-in period for this NFT. It may have already been redeemed.')
         setStatusType('error')
         setIsProcessing(false)
         return
@@ -171,7 +193,7 @@ export function ClaimForm() {
         const startDate = new Date(startTime * 1000).toLocaleString()
         const endDate = new Date(endTime * 1000).toLocaleString()
         
-        setStatusMessage(`📋 Staking Position Info:\n\n🔒 Lock Period: ${lockDays} days\n📅 Started: ${startDate}\n⏰ Matures: ${endDate}\n⏳ Time Remaining: ${timeLeftStr}\n\n✅ You can redeem this NFT after the maturity date.`)
+        setStatusMessage(`📋 Staking Position Info:\n\n🔒 Lock-in Period: ${lockDays} days\n📅 Started: ${startDate}\n⏰ Matures: ${endDate}\n⏳ Time Remaining: ${timeLeftStr}\n\n✅ You can redeem this NFT after the maturity date.`)
         setStatusType('info')
         setIsProcessing(false)
         return
@@ -283,7 +305,7 @@ export function ClaimForm() {
       
       // Parse specific contract errors
       if (errorMsg.includes('assert failed pc=628') || errorMsg.includes('logic eval error')) {
-        errorMsg = '⏳ Your staking position is still locked. The lock period has not ended yet. Please wait until maturity to redeem.'
+        errorMsg = '⏳ Your staking position is still locked. The lock-in period has not ended yet. Please wait until maturity to redeem.'
       } else if (errorMsg.includes('asset_sender must be AssetHolding.')) {
         errorMsg = '❌ You do not own this NFT. Make sure you entered the correct asset ID and that the NFT is in your wallet.'
       }
@@ -298,12 +320,7 @@ export function ClaimForm() {
   return (
     <Card className="p-8 bg-card/50 backdrop-blur-sm border border-primary/10">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Redeem Your Stake NFT</h2>
-          <p className="text-muted-foreground mb-6">
-            Enter your NFT asset ID to redeem your staked ALGO + rewards
-          </p>
-        </div>
+        {/* Heading and intro removed per request */}
 
         {/* Asset ID Input */}
         <div className="space-y-3">
@@ -319,7 +336,7 @@ export function ClaimForm() {
             className="h-12 text-lg"
           />
           <p className="text-sm text-muted-foreground">
-            This is your unique Stake NFT identifier
+            Enter your NFT asset ID to redeem your staked ALGO + NaanFI
           </p>
         </div>
 
@@ -327,7 +344,7 @@ export function ClaimForm() {
         <Alert className="border border-primary/20 bg-primary/5">
           <AlertCircle className="h-4 w-4 text-primary" />
           <AlertDescription className="ml-2">
-            You can only claim rewards after your lock period has ended
+            You can only claim rewards after your lock-in period has ended
           </AlertDescription>
         </Alert>
 
@@ -350,7 +367,7 @@ export function ClaimForm() {
           </Alert>
         )}
         <p className="text-sm text-muted-foreground mt-2">
-          <strong>Note:</strong> This redeems your staked ALGO after the lock period ends. The NFT proves ownership and will be burned when you redeem.
+          <strong>Note:</strong> This redeems your staked ALGO after the lock-in period ends. The NFT proves ownership and will be burned when you redeem.
         </p>
       </form>
     </Card>

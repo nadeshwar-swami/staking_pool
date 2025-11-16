@@ -10,7 +10,7 @@ export function HowItWorksSection() {
     },
     {
       number: "2",
-      title: "Choose Amount & Lock Period",
+      title: "Choose Amount & Lock-in Period",
       description: "Select how much ALGO to stake and your preferred lock duration."
     },
     {
@@ -21,7 +21,7 @@ export function HowItWorksSection() {
     {
       number: "4",
       title: "Claim Rewards",
-      description: "Redeem your NFT stake token to claim rewards after lock period ends."
+      description: "Redeem your NFT stake token to claim rewards after lock-in period ends."
     }
   ]
 

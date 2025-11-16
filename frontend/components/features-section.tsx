@@ -6,7 +6,7 @@ export function FeaturesSection() {
     {
       icon: Lock,
       title: "Liquidity Without Unstaking",
-      description: "Traditional staking locks your tokens for months. NaanFi solves this by transforming every staking position into a tradable NFT, allowing users to sell, transfer, or leverage their stake anytime—without waiting for the lock period to end."
+      description: "Traditional staking locks your tokens for months. NaanFi solves this by transforming every staking position into a tradable NFT, allowing users to sell, transfer, or leverage their stake anytime—without waiting for the lock-in period to end."
     },
     {
       icon: Zap,

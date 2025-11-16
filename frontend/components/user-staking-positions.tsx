@@ -52,13 +52,20 @@ export function UserStakingPositions() {
       
       // Step 1: Get all NFTs the user owns
       const accountInfo: any = await algodClient.accountInformation(walletAddress).do()
-      const assets = accountInfo.assets || []
-      const ownedAssetIds = assets.map((a: any) => a['asset-id'])
+      console.log('Account info structure:', Object.keys(accountInfo))
+      const assets = accountInfo.assets || accountInfo['assets'] || []
+      const ownedAssetIds = assets.map((a: any) => {
+        const id = a['asset-id'] || a.assetId
+        return typeof id === 'bigint' ? Number(id) : id
+      })
       console.log('Owned NFT Asset IDs:', ownedAssetIds)
+      console.log('Assets array:', assets)
       
       // Step 2: Get app global state to check for staking metadata
       const appInfo: any = await algodClient.getApplicationByID(appId).do()
-      const globalState = appInfo.params['global-state'] || []
+      console.log('App info structure:', Object.keys(appInfo))
+      console.log('Params keys:', Object.keys(appInfo.params || {}))
+      const globalState = appInfo.params?.globalState || appInfo.params?.['global-state'] || appInfo['global-state'] || []
       console.log('Global state entries:', globalState.length)
       
       // Step 3: Build metadata map from global state
@@ -92,14 +99,17 @@ export function UserStakingPositions() {
           
           if (!nftMetadata[assetId]) nftMetadata[assetId] = {}
           
+          // Convert BigInt values to Number
+          const value = typeof kv.value.uint === 'bigint' ? Number(kv.value.uint) : kv.value.uint
+          
           if (prefix === 'NFT_S_') {
-            nftMetadata[assetId].stakedAmount = kv.value.uint
+            nftMetadata[assetId].stakedAmount = value
           } else if (prefix === 'NFT_P_') {
-            nftMetadata[assetId].lockPeriod = kv.value.uint
+            nftMetadata[assetId].lockPeriod = value
           } else if (prefix === 'NFT_ST_') {
-            nftMetadata[assetId].startTime = kv.value.uint
+            nftMetadata[assetId].startTime = value
           } else if (prefix === 'NFT_R_') {
-            nftMetadata[assetId].estimatedReward = kv.value.uint
+            nftMetadata[assetId].estimatedReward = value
           }
         }
       }
@@ -112,8 +122,8 @@ export function UserStakingPositions() {
       const now = Math.floor(Date.now() / 1000)
       
       for (const asset of assets) {
-        const assetId = asset['asset-id']
-        const amount = asset.amount
+        const assetId = typeof asset.assetId === 'bigint' ? Number(asset.assetId) : (asset['asset-id'] || asset.assetId)
+        const amount = typeof asset.amount === 'bigint' ? Number(asset.amount) : asset.amount
         
         console.log(`Checking asset ${assetId} (amount: ${amount}):`, nftMetadata[assetId])
         
@@ -258,7 +268,7 @@ export function UserStakingPositions() {
                     <span className="font-semibold text-primary">{formatAlgo(position.estimatedReward)} ALGO</span>
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Lock Period:</span>{' '}
+                    <span className="text-muted-foreground">Lock-in Period:</span>{' '}
                     <span className="font-semibold">{formatDuration(position.lockPeriod)}</span>
                   </p>
                   {!position.isReady && (

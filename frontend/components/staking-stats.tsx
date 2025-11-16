@@ -3,9 +3,9 @@ import { Info, CheckCircle2 } from 'lucide-react'
 
 export function StakingStats() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col pl-3 lg:pl-6">
       {/* Important Info */}
-      <Card className="p-6 bg-yellow-500/5 border border-yellow-500/20 space-y-3">
+      <Card className="-mt-4 lg:-mt-6 p-6 bg-yellow-500/5 border border-yellow-500/20 space-y-3">
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
           <div>
@@ -18,10 +18,10 @@ export function StakingStats() {
       </Card>
 
       {/* NFT Claim Process */}
-      <Card className="p-6 bg-card/50 backdrop-blur-sm border border-primary/10 space-y-4">
+      <Card className="p-4 bg-card/50 backdrop-blur-sm border border-primary/10 space-y-3">
         <h3 className="font-semibold text-lg">📦 How to Claim Your NFT</h3>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Step 1 */}
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
@@ -61,16 +61,16 @@ export function StakingStats() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-border">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-3 pl-3">
+              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground leading-tight">
                 <strong>Cost:</strong> ~0.002 ALGO in transaction fees for both steps
               </p>
             </div>
-            <div className="flex items-start gap-2 mt-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 mt-2 pl-3">
+              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground leading-tight">
                 <strong>Time:</strong> ~30 seconds per transaction confirmation
               </p>
             </div>
@@ -78,28 +78,7 @@ export function StakingStats() {
         </div>
       </Card>
 
-      {/* What's Next */}
-      <Card className="p-6 bg-secondary/5 border border-secondary/20 space-y-3">
-        <h3 className="font-semibold">What Happens Next?</h3>
-        <ul className="text-sm text-muted-foreground space-y-2">
-          <li className="flex gap-2">
-            <span className="text-primary font-bold">•</span>
-            <span>Your ALGO is locked in the smart contract</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary font-bold">•</span>
-            <span>The NFT represents your stake position</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary font-bold">•</span>
-            <span>After lock period ends, use the NFT to redeem your ALGO + rewards</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary font-bold">•</span>
-            <span>Go to the "Unstake" page and enter your NFT Asset ID to redeem</span>
-          </li>
-        </ul>
-      </Card>
+      {/* 'What Happens Next?' moved to the stake page to display full-width */}
     </div>
   )
 }

@@ -17,51 +17,13 @@ interface NFTItem {
   listed: boolean
 }
 
-export function NftListing() {
-  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+interface NftListingProps {
+  nfts: NFTItem[]
+  onBuyNFT: (nftId: string) => void
+}
 
-  const nfts: NFTItem[] = [
-    {
-      id: "1",
-      tokenId: 1234567,
-      stakedAmount: "1,000 ALGO",
-      rewards: "120 NAAN",
-      price: "950 ALGO",
-      daysLeft: 5,
-      apr: "12%",
-      listed: true
-    },
-    {
-      id: "2",
-      tokenId: 1234568,
-      stakedAmount: "5,000 ALGO",
-      rewards: "625 NAAN",
-      price: "4,800 ALGO",
-      daysLeft: 20,
-      apr: "10%",
-      listed: true
-    },
-    {
-      id: "3",
-      tokenId: 1234569,
-      stakedAmount: "2,500 ALGO",
-      rewards: "312.50 NAAN",
-      price: "2,400 ALGO",
-      daysLeft: 45,
-      apr: "8%",
-      listed: true
-    },
-    {
-      id: "4",
-      tokenId: 1234570,
-      stakedAmount: "750 ALGO",
-      rewards: "90 NAAN",
-      price: "720 ALGO",
-      daysLeft: 10,
-      apr: "12%",
-      listed: true
-    }
-  ]
+export function NftListing({ nfts, onBuyNFT }: NftListingProps) {
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
 
   const toggleFavorite = (id: string) => {
     const newFavorites = new Set(favorites)
@@ -83,11 +45,14 @@ export function NftListing() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {nfts.map((nft) => (
           <Card key={nft.id} className="overflow-hidden bg-card/50 backdrop-blur-sm border border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/10 flex flex-col">
-            {/* Card header with favorite button */}
-            <div className="p-4 border-b border-border flex justify-between items-start">
-              <Badge variant="outline" className="text-xs">
-                #{nft.tokenId}
-              </Badge>
+            {/* Card header with brand + asset id styling */}
+            <div className="pt-1 pb-3 px-4 border-b border-border flex items-start justify-between">
+              <div className="flex items-baseline gap-2 select-none">
+                <span className="text-2xl font-extrabold tracking-tight text-white">NaanFi</span>
+                <span className="text-xs text-muted-foreground font-medium" aria-label={`Asset ID ${nft.tokenId}`}>
+                  #{nft.tokenId}
+                </span>
+              </div>
               <button
                 onClick={() => toggleFavorite(nft.id)}
                 className="p-1 hover:bg-muted rounded"
@@ -132,7 +97,10 @@ export function NftListing() {
                 <p className="text-xs text-muted-foreground mb-1">Price</p>
                 <p className="text-xl font-bold text-primary">{nft.price}</p>
               </div>
-              <Button className="w-full bg-primary hover:bg-primary/90">
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90"
+                onClick={() => onBuyNFT(nft.id)}
+              >
                 <ShoppingCart className="w-4 h-4 mr-2" />
                 Buy Now
               </Button>

@@ -4,10 +4,15 @@ import { Sheet } from "@/components/ui/sheet"
 import { ShoppingCart, TrendingUp } from 'lucide-react'
 import { X } from 'lucide-react'
 
-export function MarketplaceHeader() {
+interface MarketplaceHeaderProps {
+  onSellNFT: (nftAssetId: string, price: string) => Promise<void>
+}
+
+export function MarketplaceHeader({ onSellNFT }: MarketplaceHeaderProps) {
   const [open, setOpen] = useState(false);
   const [nftId, setNftId] = useState("");
   const [price, setPrice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
     <div className="mb-12">
@@ -75,12 +80,24 @@ export function MarketplaceHeader() {
                 <div className="flex flex-col gap-2 mt-2">
                   <button
                     type="button"
-                    className="w-full py-3 bg-primary text-white rounded-full font-semibold text-base hover:bg-primary/80 transition-colors"
-                    onClick={() => {
-                      // TODO: Implement sell logic here
-                      setOpen(false);
+                    className="w-full py-3 bg-primary text-white rounded-full font-semibold text-base hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      if (nftId && price && !isSubmitting) {
+                        setIsSubmitting(true);
+                        try {
+                          await onSellNFT(nftId, price);
+                          setNftId("");
+                          setPrice("");
+                          setOpen(false);
+                        } catch (error) {
+                          console.error('Error listing NFT:', error);
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }
                     }}
-                  >Sell Now</button>
+                  >{isSubmitting ? 'Listing...' : 'Sell Now'}</button>
                 </div>
               </form>
             </div>

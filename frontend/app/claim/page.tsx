@@ -10,24 +10,23 @@ export default function ClaimPage() {
     <main className="min-h-screen flex flex-col">
       <Navbar />
       
-      <section className="flex-1 py-20 px-4 sm:px-6 lg:px-8">
+      <section className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-5xl">
-          <div className="mb-12">
-            <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-balance">
-              Unstake (Redeem) Your ALGO
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              View your staking positions and redeem after your lock period ends
-            </p>
-          </div>
-
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Claim form */}
-            <div className="lg:col-span-2">
+            {/* Left side - Heading and Claim form */}
+            <div className="lg:col-span-2 space-y-8">
+              <div>
+                <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-balance">
+                  Redeem Your ALGO
+                </h1>
+                <p className="text-xl text-muted-foreground">
+                  View your staking positions and redeem after your lock-in period ends
+                </p>
+              </div>
               <ClaimForm />
             </div>
 
-            {/* Real staking positions */}
+            {/* Right side - Staking positions at same level as heading */}
             <div>
               <UserStakingPositions />
             </div>

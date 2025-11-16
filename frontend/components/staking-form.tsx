@@ -841,31 +841,21 @@ export function StakingForm() {
   
 
   return (
-    <Card className="p-8 bg-card/50 backdrop-blur-sm border border-primary/10">
-      <form className="space-y-8" onSubmit={(e) => { e.preventDefault() }}>
-        {!isConnected && (
-          <Alert className="border border-yellow-500/20 bg-yellow-500/5">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="ml-2 text-yellow-600">
-              Please connect your wallet to stake
-            </AlertDescription>
-          </Alert>
-        )}
+    <Card className="p-6 bg-card/50 backdrop-blur-sm border border-primary/10 lg:w-[calc(100%+5rem)] lg:relative lg:z-10">
+      <form className="space-y-6" onSubmit={(e) => { e.preventDefault() }}>
 
         {/* ALGO Amount Input */}
         <div className="space-y-3">
-          <Label htmlFor="amount" className="text-base font-semibold">
-            ALGO Amount
-          </Label>
           <div className="relative">
             <Input
               id="amount"
+              aria-label="ALGO amount"
               type="number"
               placeholder="Enter amount to stake"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={!isConnected}
-              className="pr-12 h-12 text-lg"
+              className="pr-12 h-10 text-lg"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
               ALGO
@@ -876,7 +866,7 @@ export function StakingForm() {
 
         {/* Lock Period Selection */}
         <div className="space-y-4">
-          <Label className="text-base font-semibold">Lock Period</Label>
+          <Label className="text-base font-semibold">Lock-in Period</Label>
           <RadioGroup value={lockPeriod} onValueChange={(v) => setLockPeriod(v as LockPeriod)} disabled={!isConnected}>
             <div className="space-y-3">
               {[
@@ -886,7 +876,7 @@ export function StakingForm() {
               ].map((option) => (
                 <div
                   key={option.value}
-                  className="flex items-center p-4 border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
+                  className="flex items-center p-3 border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
                 >
                   <RadioGroupItem value={option.value} id={`period-${option.value}`} />
                   <Label
@@ -904,7 +894,7 @@ export function StakingForm() {
 
         {/* Estimated Rewards */}
         {amount && (
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <p className="text-sm text-muted-foreground mb-1">Estimated Annual Rewards</p>
             <p className="text-2xl font-bold text-primary">{estimatedReward} NAAN</p>
           </div>
@@ -926,7 +916,7 @@ export function StakingForm() {
             <Button
               type="button"
               size="lg"
-              className="w-full bg-primary hover:bg-primary/90 text-lg font-semibold py-6 flex items-center justify-center"
+              className="w-full bg-primary hover:bg-primary/90 text-lg font-semibold py-4 flex items-center justify-center"
               onClick={async () => {
                 const addr = await connect()
                 if (!addr) setConnectFailed(true)
@@ -951,7 +941,7 @@ export function StakingForm() {
           <Button
             type="button"
             size="lg"
-            className="w-full bg-primary hover:bg-primary/90 text-lg font-semibold py-6"
+            className="w-full bg-primary hover:bg-primary/90 text-lg font-semibold py-4"
             onClick={handleStake}
             disabled={isProcessing || !amount || parseFloat(amount) < 1}
           >

@@ -5,7 +5,7 @@ This directory contains the production staking frontend for interacting with the
 ## Features
 - Pera Wallet connection (stake, opt-in, claim, redeem flows)
 - ALGO balance display
-- Lock period selection (30 / 60 / 90 days) with dynamic reward estimate
+- Lock-in period selection (30 / 60 / 90 days) with dynamic reward estimate
 - Two-step NFT claim process (Opt-in → Claim)
 - Manual fallback for NFT Asset ID entry when auto-detect fails
 - Redeem page to unlock staked ALGO + rewards using the NFT
@@ -42,7 +42,7 @@ Copy-Item -Path ".\.env.example" -Destination ".\.env" -Force
 
 ## Staking Flow
 1. Connect wallet
-2. Enter amount ≥ 1 ALGO and select lock period
+2. Enter amount ≥ 1 ALGO and select lock-in period
 3. Click “Stake ALGO” and sign grouped transaction
 4. If NFT auto-detected: claim box appears
 5. If not: follow explorer link (now using Lora) and enter Asset ID manually

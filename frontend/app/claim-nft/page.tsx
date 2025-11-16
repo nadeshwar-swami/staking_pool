@@ -12,7 +12,7 @@ export default function ClaimNftPage() {
 
       <section className="flex-1 py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-5xl">
-          <div className="mb-12">
+          <div className="mb-6">
             <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-balance">
               Claim Your NFT
             </h1>
@@ -21,14 +21,14 @@ export default function ClaimNftPage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-8 items-start">
             {/* Claim NFT form */}
             <div className="lg:col-span-2">
               <ClaimNftForm />
             </div>
 
             {/* Help sidebar */}
-            <div>
+            <div className="self-start">
               <ClaimNftHelp />
             </div>
           </div>

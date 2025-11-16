@@ -5,7 +5,7 @@ import { Navbar } from "@/components/navbar";
 const faqs = [
   {
     question: "How are rewards calculated?",
-    answer: "Rewards are calculated based on the staked amount, lock period, and the APR for that period."
+    answer: "Rewards are calculated based on the staked amount, lock-in period, and the APR for that period."
   },
   {
     question: "Is my staked ALGO safe?",
@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     question: "How do I stake my ALGO?",
-    answer: "Connect your wallet, enter the amount to stake, select a lock period, and confirm the transaction."
+    answer: "Connect your wallet, enter the amount to stake, select a lock-in period, and confirm the transaction."
   },
       {
-        question: "What are the lock periods and rewards?",
-        answer: "You can choose between 30, 60, or 90 days. Each period offers different APRs: 8%, 10%, and 12% respectively."
+        question: "What are the lock-in periods and rewards?",
+        answer: "You can choose between 30, 60, or 90 days. Each lock-in period offers different APRs: 8%, 10%, and 12% respectively."
       },
       {
         question: "What is NaanFi?",
@@ -28,8 +28,8 @@ const faqs = [
         answer: "You receive an NFT representing your staked position, which can be used to claim rewards or transfer your stake."
       },
       {
-        question: "Can I withdraw before the lock period ends?",
-        answer: "Withdrawals are only possible after the selected lock period ends. Early withdrawal is not supported."
+        question: "Can I withdraw before the lock-in period ends?",
+        answer: "Withdrawals are only possible after the selected lock-in period ends. Early withdrawal is not supported."
       },
       {
         question: "Are there any fees for staking?",
@@ -37,7 +37,7 @@ const faqs = [
       },
       {
         question: "How do I claim my rewards?",
-        answer: "After the lock period ends, use the Claim page to withdraw your rewards and staked ALGO."
+        answer: "After the lock-in period ends, use the Claim page to withdraw your rewards and staked ALGO."
       },
       {
         question: "Can I transfer my staked position?",

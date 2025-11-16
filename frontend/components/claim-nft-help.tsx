@@ -79,7 +79,7 @@ export function ClaimNftHelp() {
           </li>
           <li className="flex gap-2">
             <span className="text-primary font-bold">•</span>
-            <span>Keep it safe until your lock period ends</span>
+            <span>Keep it safe until your lock-in period ends</span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary font-bold">•</span>
