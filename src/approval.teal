@@ -1,0 +1,629 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l33
+txn OnCompletion
+int OptIn
+==
+bnz main_l32
+txn OnCompletion
+int NoOp
+==
+bnz main_l4
+err
+main_l4:
+txna ApplicationArgs 0
+byte "stake"
+==
+bnz main_l24
+txna ApplicationArgs 0
+byte "redeem"
+==
+bnz main_l23
+txna ApplicationArgs 0
+byte "claim_nft"
+==
+bnz main_l22
+txna ApplicationArgs 0
+byte "admin_deliver"
+==
+bnz main_l21
+txna ApplicationArgs 0
+byte "withdraw"
+==
+bnz main_l18
+txna ApplicationArgs 0
+byte "claim"
+==
+bnz main_l15
+txna ApplicationArgs 0
+byte "set_params"
+==
+bnz main_l14
+txna ApplicationArgs 0
+byte "opt_in_asset"
+==
+bnz main_l13
+err
+main_l13:
+txn NumAssets
+int 0
+>
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Assets 0
+itxn_field XferAsset
+global CurrentApplicationAddress
+itxn_field AssetReceiver
+int 0
+itxn_field AssetAmount
+itxn_submit
+int 1
+return
+main_l14:
+txn Sender
+global CreatorAddress
+==
+assert
+byte "RA"
+txna ApplicationArgs 1
+btoi
+app_global_put
+byte "RR"
+txna ApplicationArgs 2
+btoi
+app_global_put
+int 1
+return
+main_l15:
+callsub updateglobal_0
+txn Sender
+callsub pendingreward_1
+int 0
+>
+bnz main_l17
+main_l16:
+txn Sender
+byte "RD"
+byte "RPS"
+app_global_get
+app_local_put
+int 1
+return
+main_l17:
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "RA"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+txn Sender
+callsub pendingreward_1
+itxn_field AssetAmount
+itxn_submit
+b main_l16
+main_l18:
+global GroupSize
+int 1
+==
+assert
+callsub updateglobal_0
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+txn Sender
+byte "S"
+app_local_get
+txna ApplicationArgs 1
+btoi
+>=
+assert
+txn Sender
+byte "S"
+txn Sender
+byte "S"
+app_local_get
+txna ApplicationArgs 1
+btoi
+-
+app_local_put
+byte "TS"
+byte "TS"
+app_global_get
+txna ApplicationArgs 1
+btoi
+-
+app_global_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+txn Sender
+itxn_field Receiver
+txna ApplicationArgs 1
+btoi
+itxn_field Amount
+itxn_submit
+txn Sender
+callsub pendingreward_1
+int 0
+>
+bnz main_l20
+main_l19:
+txn Sender
+byte "RD"
+byte "RPS"
+app_global_get
+app_local_put
+int 1
+return
+main_l20:
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "RA"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+txn Sender
+callsub pendingreward_1
+itxn_field AssetAmount
+itxn_submit
+b main_l19
+main_l21:
+txn Sender
+global CreatorAddress
+==
+assert
+txn NumAssets
+int 1
+==
+assert
+txn NumAccounts
+int 1
+>
+assert
+txna Accounts 1
+txna Assets 0
+asset_holding_get AssetBalance
+store 14
+store 13
+load 14
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Assets 0
+itxn_field XferAsset
+txna Accounts 1
+itxn_field AssetReceiver
+int 1
+itxn_field AssetAmount
+itxn_submit
+byte "NFT_OWNER_"
+txna Assets 0
+itob
+concat
+app_global_del
+int 1
+return
+main_l22:
+txn NumAssets
+int 1
+==
+assert
+txn Sender
+txna Assets 0
+asset_holding_get AssetBalance
+store 12
+store 11
+load 12
+assert
+byte "NFT_OWNER_"
+txna Assets 0
+itob
+concat
+app_global_get
+txn Sender
+==
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Assets 0
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+int 1
+itxn_field AssetAmount
+itxn_submit
+byte "NFT_OWNER_"
+txna Assets 0
+itob
+concat
+app_global_del
+int 1
+return
+main_l23:
+txn NumAssets
+int 1
+==
+assert
+txn Sender
+txna Assets 0
+asset_holding_get AssetBalance
+store 10
+store 9
+load 10
+assert
+load 9
+int 1
+>=
+assert
+byte "NFT_S_"
+txna Assets 0
+itob
+concat
+app_global_get
+store 5
+byte "NFT_P_"
+txna Assets 0
+itob
+concat
+app_global_get
+store 6
+byte "NFT_ST_"
+txna Assets 0
+itob
+concat
+app_global_get
+store 7
+byte "NFT_R_"
+txna Assets 0
+itob
+concat
+app_global_get
+store 8
+load 5
+int 0
+>
+assert
+global LatestTimestamp
+load 7
+load 6
++
+>=
+assert
+itxn_begin
+int pay
+itxn_field TypeEnum
+txn Sender
+itxn_field Receiver
+load 5
+load 8
++
+itxn_field Amount
+itxn_submit
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Assets 0
+itxn_field XferAsset
+txn Sender
+itxn_field AssetSender
+global CurrentApplicationAddress
+itxn_field AssetReceiver
+int 1
+itxn_field AssetAmount
+itxn_submit
+byte "NFT_S_"
+txna Assets 0
+itob
+concat
+app_global_del
+byte "NFT_P_"
+txna Assets 0
+itob
+concat
+app_global_del
+byte "NFT_ST_"
+txna Assets 0
+itob
+concat
+app_global_del
+byte "NFT_R_"
+txna Assets 0
+itob
+concat
+app_global_del
+int 1
+return
+main_l24:
+global GroupSize
+int 2
+==
+assert
+callsub updateglobal_0
+gtxn 0 TypeEnum
+int pay
+==
+assert
+gtxn 0 Receiver
+global CurrentApplicationAddress
+==
+assert
+gtxn 0 Amount
+int 0
+>
+assert
+txn Sender
+byte "S"
+txn Sender
+byte "S"
+app_local_get
+gtxn 0 Amount
++
+app_local_put
+byte "TS"
+byte "TS"
+app_global_get
+gtxn 0 Amount
++
+app_global_put
+txn Sender
+byte "RD"
+byte "RPS"
+app_global_get
+app_local_put
+byte "NS"
+app_global_get
+int 1
++
+store 4
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1
+itxn_field ConfigAssetTotal
+int 0
+itxn_field ConfigAssetDecimals
+byte "NAANFI"
+itxn_field ConfigAssetUnitName
+byte "naanfi #"
+load 4
+itob
+concat
+itxn_field ConfigAssetName
+byte ""
+itxn_field ConfigAssetURL
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+itxn_submit
+itxn CreatedAssetID
+store 0
+byte "NFT_OWNER_"
+load 0
+itob
+concat
+txn Sender
+app_global_put
+txna ApplicationArgs 1
+btoi
+store 1
+load 1
+int 2592000
+==
+bnz main_l31
+load 1
+int 5184000
+==
+bnz main_l30
+int 1
+bnz main_l28
+err
+main_l28:
+int 10
+main_l29:
+store 2
+gtxn 0 Amount
+load 2
+mulw
+load 1
+uncover 2
+dig 1
+*
+cover 2
+mulw
+cover 2
++
+swap
+int 100
+int 31536000
+mulw
+divmodw
+pop
+pop
+swap
+!
+assert
+store 3
+byte "NFT_S_"
+load 0
+itob
+concat
+gtxn 0 Amount
+app_global_put
+byte "NFT_P_"
+load 0
+itob
+concat
+load 1
+app_global_put
+byte "NFT_ST_"
+load 0
+itob
+concat
+global LatestTimestamp
+app_global_put
+byte "NFT_R_"
+load 0
+itob
+concat
+load 3
+app_global_put
+byte "NS"
+load 4
+app_global_put
+int 1
+return
+main_l30:
+int 7
+b main_l29
+main_l31:
+int 5
+b main_l29
+main_l32:
+txn Sender
+byte "S"
+int 0
+app_local_put
+txn Sender
+byte "RD"
+int 0
+app_local_put
+int 1
+return
+main_l33:
+byte "TS"
+int 0
+app_global_put
+byte "RPS"
+int 0
+app_global_put
+byte "LU"
+global LatestTimestamp
+app_global_put
+txn NumAppArgs
+int 0
+>
+bnz main_l36
+byte "RA"
+int 0
+app_global_put
+main_l35:
+byte "NS"
+int 0
+app_global_put
+byte "RR"
+int 0
+app_global_put
+int 1
+return
+main_l36:
+byte "RA"
+txna ApplicationArgs 0
+btoi
+app_global_put
+b main_l35
+
+// update_global
+updateglobal_0:
+global LatestTimestamp
+byte "LU"
+app_global_get
+>
+bnz updateglobal_0_l6
+int 0
+updateglobal_0_l2:
+store 15
+load 15
+int 0
+==
+bnz updateglobal_0_l5
+byte "TS"
+app_global_get
+int 0
+==
+bz updateglobal_0_l7
+byte "LU"
+global LatestTimestamp
+app_global_put
+retsub
+updateglobal_0_l5:
+retsub
+updateglobal_0_l6:
+global LatestTimestamp
+byte "LU"
+app_global_get
+-
+b updateglobal_0_l2
+updateglobal_0_l7:
+byte "RR"
+app_global_get
+load 15
+mulw
+int 1000000000
+uncover 2
+dig 1
+*
+cover 2
+mulw
+cover 2
++
+swap
+int 0
+byte "TS"
+app_global_get
+divmodw
+pop
+pop
+swap
+!
+assert
+store 16
+byte "RPS"
+byte "RPS"
+app_global_get
+load 16
++
+app_global_put
+byte "LU"
+global LatestTimestamp
+app_global_put
+retsub
+
+// pending_reward
+pendingreward_1:
+store 17
+load 17
+byte "S"
+app_local_get
+byte "RPS"
+app_global_get
+load 17
+byte "RD"
+app_local_get
+-
+mulw
+int 0
+int 1000000000
+divmodw
+pop
+pop
+swap
+!
+assert
+retsub

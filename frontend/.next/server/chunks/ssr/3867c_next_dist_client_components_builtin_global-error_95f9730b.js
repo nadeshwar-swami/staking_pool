@@ -1,0 +1,3 @@
+module.exports=[84501,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(12004);a.n(d("[project]/staking_pool/v0-modern-landing-page-for-webdeve/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},14961,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(12004);a.n(d("[project]/staking_pool/v0-modern-landing-page-for-webdeve/node_modules/next/dist/client/components/builtin/global-error.js"))},96037,a=>{"use strict";a.i(84501);var b=a.i(14961);a.n(b)}];
+
+//# sourceMappingURL=3867c_next_dist_client_components_builtin_global-error_95f9730b.js.map

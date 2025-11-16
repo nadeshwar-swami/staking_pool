@@ -1,0 +1,10 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/claim-nft/page": "app/claim-nft/page.js",
+  "/claim/page": "app/claim/page.js",
+  "/faq/page": "app/faq/page.js",
+  "/marketplace/page": "app/marketplace/page.js",
+  "/page": "app/page.js",
+  "/stake/page": "app/stake/page.js"
+}
