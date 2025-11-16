@@ -150,6 +150,15 @@ python deploy_with_asa.py <asset_id>
 ✓ Configuration saved to app_state.json
 ```
 
+**⚠️ Important**: If you deploy your own contract, you **must** update the `app_state.json` file in the root directory with your new `app_id` and `asset_id`. The frontend reads this file to interact with the smart contract.
+
+```json
+{
+  "app_id": YOUR_APP_ID,
+  "asset_id": YOUR_ASSET_ID
+}
+```
+
 ### Step 6: Run the Frontend
 
 ```bash
