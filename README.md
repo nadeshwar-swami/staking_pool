@@ -68,8 +68,8 @@ Before you begin, ensure you have the following installed:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/naanfi-staking.git
-cd naanfi-staking
+git clone https://github.com/nadeshwar-swami/staking_pool.git
+cd staking_pool
 ```
 
 ### Step 2: Install Backend Dependencies
@@ -86,16 +86,20 @@ python -c "import pyteal; print('PyTeal installed successfully')"
 
 ### Step 3: Install Frontend Dependencies
 
+Using npm:
 ```bash
 cd frontend
 npm install
+```
 
-# Or using pnpm (faster)
+Or using pnpm (faster):
+```bash
+cd frontend
 pnpm install
 ```
 
 **Troubleshooting**: If `npm install` fails, try:
-- Delete `node_modules` and `pnpm-lock.yaml`
+- Delete `node_modules` and `package-lock.json`
 - Run `npm cache clean --force`
 - Try again with `npm install --legacy-peer-deps`
 
