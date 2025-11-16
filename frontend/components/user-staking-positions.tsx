@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { useWallet } from "@/components/wallet-context"
-import * as algosdk from "algosdk"
-import appState from "../../app_state.json"
+import * as algosdk from 'algosdk'
+import appState from "../app_state.json"
 
 const ALGOD_SERVER = "https://testnet-api.algonode.cloud"
 const ALGOD_TOKEN = ""

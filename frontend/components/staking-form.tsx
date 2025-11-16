@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useWallet } from "@/components/wallet-context"
-import * as algosdk from "algosdk"
-import appState from "../../app_state.json"
+import * as algosdk from 'algosdk'
+import appState from "../app_state.json"
 import { Wallet, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 

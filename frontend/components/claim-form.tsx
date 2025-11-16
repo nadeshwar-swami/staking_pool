@@ -9,7 +9,7 @@ import { AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useWallet } from "@/components/wallet-context"
 import * as algosdk from 'algosdk'
-import appState from "../../app_state.json"
+import appState from "../app_state.json"
 
 const ALGOD_SERVER = "https://testnet-api.algonode.cloud"
 const ALGOD_TOKEN = ""
